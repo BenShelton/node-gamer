@@ -1,0 +1,27 @@
+{
+  "name": "node-gamer",
+  "version": "0.0.1",
+  "description": "A Node.js based game-learning bot based on node-nn",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "mocha",
+    "lint": "eslint *.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "jsnes": "bfirsh/jsnes",
+    "node-nn": "BenShelton/node-nn",
+    "socket.io": "^2.0.4"
+  },
+  "devDependencies": {
+    "eslint": "^4.17.0",
+    "eslint-config-standard": "^11.0.0-beta.0",
+    "eslint-plugin-import": "^2.8.0",
+    "eslint-plugin-node": "^5.2.1",
+    "eslint-plugin-promise": "^3.6.0",
+    "eslint-plugin-standard": "^3.0.1",
+    "mocha": "^5.0.0"
+  }
+}

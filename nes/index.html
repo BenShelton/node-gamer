@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>NES Emulator</title>
+  <script type="text/javascript" src="https://unpkg.com/jsnes/dist/jsnes.min.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <style>
+    body {
+      height: 100vh;
+      width: 100vw;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: black;
+    }
+    span {
+      flex: 1 0 auto;
+      text-align: center;
+      margin: 0 10px;
+    }
+    #details {
+      display: flex;
+      height: 50px;
+      padding: 10px;
+      overflow-x: scroll;
+      font-size: 30px;
+      color: white;
+    }
+    #wrapper {
+      position: absolute;
+      top: 50px;
+      right: 0;
+      bottom: 0;
+      left: 0;
+    }
+    #screen {
+      display: block;
+      margin: 0 auto;
+      image-rendering: pixelated;
+    }
+  </style>
+</head>
+<body>
+  <div id="details">
+    <span id="generation">Generation: 0</span>
+  </div>
+  <div id="wrapper">
+    <canvas id="screen" width="256" height="240"></canvas>
+  </div>
+  <script>
+    // socket.io setup
+    const socket = io();
+    socket.on('connect', () => {
+      requestAnimationFrame(draw);
+    })
+
+    // metadata
+    const generation = document.getElementById('generation');
+    socket.on('meta', meta => {
+      generation.innerText = `Generation: ${meta.generation}`;
+    })
+
+    // image visualisation
+    const wrapper = document.getElementById('wrapper');
+    const canvas = document.getElementById('screen');
+    const context = canvas.getContext('2d');
+    const imageData = context.getImageData(0, 0, 256, 240);
+    context.fillStyle = 'black';
+    context.fillRect(0, 0, 256, 240);
+    const buf = new ArrayBuffer(imageData.data.length);
+    const buf8 = new Uint8ClampedArray(buf);
+    const buf32 = new Uint32Array(buf);
+    for (let i = 0; i < buf32.length; ++i) {
+      buf32[i] = 0xff000000;
+    }
+    socket.on('frame', buffer => {
+      let i = 0;
+      for (let y = 0; y < 240; y++) {
+        for (let x = 0; x < 256; x++) {
+          i = y * 256 + x;
+          buf32[i] = 0xff000000 | buffer[i];
+        }
+      }
+      requestAnimationFrame(draw);
+    })
+    function draw () {
+      imageData.data.set(buf8);
+      context.putImageData(imageData, 0, 0);
+    }
+    function scaleCanvas () {
+      let parentWidth = wrapper.clientWidth;
+      let parentHeight = wrapper.clientHeight;
+      let parentRatio = parentWidth / parentHeight;
+      let desiredRatio = 256 / 240;
+      if (desiredRatio < parentRatio) {
+        canvas.style.width = `${Math.round(parentHeight * desiredRatio)}px`;
+        canvas.style.height = `${parentHeight}px`;
+      } else {
+        canvas.style.width = `${parentWidth}px`;
+        canvas.style.height = `${Math.round(parentWidth / desiredRatio)}px`;
+      }
+    }
+    scaleCanvas();
+
+    // resize
+    window.addEventListener('resize', scaleCanvas)
+
+    // function RingBuffer(t,i){this._elements=new Array(t||50),this._first=0,this._last=0,this._size=0,this._evictedCb=i}RingBuffer.prototype.capacity=function(){return this._elements.length},RingBuffer.prototype.isEmpty=function(){return 0===this.size()},RingBuffer.prototype.isFull=function(){return this.size()===this.capacity()},RingBuffer.prototype.peek=function(){if(this.isEmpty())throw new Error("RingBuffer is empty");return this._elements[this._first]},RingBuffer.prototype.peekN=function(t){if(t>this._size)throw new Error("Not enough elements in RingBuffer");var i=Math.min(this._first+t,this.capacity()),e=this._elements.slice(this._first,i);if(i<this.capacity())return e;var s=this._elements.slice(0,t-e.length);return e.concat(s)},RingBuffer.prototype.deq=function(){var t=this.peek();return this._size--,this._first=(this._first+1)%this.capacity(),t},RingBuffer.prototype.deqN=function(t){var i=this.peekN(t);return this._size-=t,this._first=(this._first+t)%this.capacity(),i},RingBuffer.prototype.enq=function(t){this._end=(this._first+this.size())%this.capacity();var i=this.isFull();return i&&this._evictedCb&&this._evictedCb(this._elements[this._end]),this._elements[this._end]=t,i?this._first=(this._first+1)%this.capacity():this._size++,this.size()},RingBuffer.prototype.size=function(){return this._size};
+    // socket.on('audioSample', ({ left, right }) => {
+    //   audioBuffer.enq(left);
+    //   audioBuffer.enq(right);
+    // })
+    // const audioBuffer = new RingBuffer(8192 * 2);
+    // const audioCtx = new AudioContext();
+    // const scriptNode = audioCtx.createScriptProcessor(1024, 0, 2);
+    // scriptNode.onaudioprocess = e => {
+    //   let left = e.outputBuffer.getChannelData(0);
+    //   let right = e.outputBuffer.getChannelData(1);
+    //   let size = left.length;
+    //   try {
+    //     var samples = audioBuffer.deqN(size * 2);
+    //   } catch (e) {
+    //     for (var j = 0; j < size; j++) {
+    //       left[j] = 0;
+    //       right[j] = 0;
+    //     }
+    //     return;
+    //   }
+    //   for (var i = 0; i < size; i++) {
+    //     left[i] = samples[i * 2];
+    //     right[i] = samples[i * 2 + 1];
+    //   }
+    // }
+    // scriptNode.connect(audioCtx.destination);
+  </script>
+</body>
+</html>
