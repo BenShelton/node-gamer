@@ -13,8 +13,8 @@ const BUTTONS = [
 const options = JSON.parse(process.argv[2])
 const emulator = new NES(options)
 
-process.on('message', async (msg) => {
-  const bot = NeuralNetwork.fromJSON(msg)
+process.on('message', async ({ net, id }) => {
+  const bot = NeuralNetwork.fromJSON(net)
   emulator.load()
   let staticFrames = 0
   let staticPos = 0
@@ -39,5 +39,5 @@ process.on('message', async (msg) => {
   // emulator.sendMeta({ generation: botnet._generationNum })
   const fitnessVals = emulator.readMemory([0x0075, 0x0090])
   const fitness = (fitnessVals[0] * 255) + fitnessVals[1]
-  process.send({ fitness })
+  process.send({ id, fitness })
 })

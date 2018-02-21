@@ -80,25 +80,29 @@ const botOptions = JSON.stringify({
   file: 'nes/1-1.json',
   fromSave: true
 })
+const workers = [...Array(3)].map(() => fork('nes/station', [botOptions]))
+let tickets = 0
 
 const fitnessFn = bot => {
-  if (!bot.worker) {
-    bot.worker = fork('nes/station', [botOptions])
-  }
+  const ticket = ++tickets
+  const worker = workers[ticket % 3]
   return new Promise(resolve => {
-    bot.worker.send(bot.toJSON())
-    bot.worker.on('message', ({ fitness }) => {
-      resolve(fitness)
+    worker.send({ net: bot.toJSON(), id: ticket })
+    worker.on('message', ({ id, fitness }) => {
+      if (id === ticket) resolve(fitness)
     })
   })
 }
 
 const genFn = async meta => {
+  for (const worker of workers) {
+    worker.removeAllListeners('message')
+  }
   emulator.load()
   emulator.sendMeta(meta)
   let staticFrames = 0
   let staticPos = 0
-  while (staticFrames < 100) {
+  while (staticFrames < 120) {
     const output = meta.best.feedForward(emulator.readMemory(emulator.copyMemory()))
     Matrix.perceptron(output).data.forEach((v, i) => {
       emulator.setButton(v[0], BUTTONS[i])
@@ -119,9 +123,9 @@ const genFn = async meta => {
 }
 
 const botnet = new NeuroEvolution({
-  size: 5,
+  size: 12,
   killRate: 0.4,
-  mutationRate: 0.15,
+  mutationRate: 0.25,
   mutationPower: 0.1,
   template,
   fitnessFn,
