@@ -72,8 +72,9 @@ const emulator = new NES({
 })
 
 const template = new NeuralNetwork({
-  // layerSizes: [ADDRESSES.length, 30, 6]
-  layerSizes: [emulator.copyMemory().length, 50, 6]
+  // layerSizes: [ADDRESSES.length, 30, BUTTONS.length]
+  // layerSizes: [emulator.copyMemory().length, 50, BUTTONS.length]
+  layerSizes: [emulator.readSpriteData().length, 80, 30, BUTTONS.length]
 })
 
 const botOptions = JSON.stringify({
@@ -94,16 +95,21 @@ const fitnessFn = bot => {
   })
 }
 
+let active = false
 const genFn = async meta => {
   for (const worker of workers) {
     worker.removeAllListeners('message')
   }
+  if (active) return
+  active = true
+  const bot = meta.best
   emulator.load()
   emulator.sendMeta(meta)
   let staticFrames = 0
   let staticPos = 0
-  while (staticFrames < 120) {
-    const output = meta.best.feedForward(emulator.readMemory(emulator.copyMemory()))
+  while (staticFrames < 150) {
+    // const output = bot.feedForward(emulator.readMemory(emulator.copyMemory()))
+    const output = bot.feedForward(emulator.readSpriteData())
     Matrix.perceptron(output).data.forEach((v, i) => {
       emulator.setButton(v[0], BUTTONS[i])
     })
@@ -120,11 +126,12 @@ const genFn = async meta => {
       staticPos = pos
     }
   }
+  active = false
 }
 
 const botnet = new NeuroEvolution({
-  size: 12,
-  killRate: 0.4,
+  size: 20,
+  killRate: 0.25,
   mutationRate: 0.25,
   mutationPower: 0.1,
   template,
@@ -133,4 +140,4 @@ const botnet = new NeuroEvolution({
   logStats: true
 })
 
-botnet.runGenerations(100).then(() => console.log('done!'))
+botnet.runGenerations(1000).then(() => console.log('done!'))

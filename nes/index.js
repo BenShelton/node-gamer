@@ -66,6 +66,10 @@ module.exports = class NES {
     )
   }
 
+  readSpriteData () {
+    return this.emulator.ppu.spriteMem.slice()
+  }
+
   chooseButton (data) {
     switch (data.toString().trim().toLowerCase()) {
       case 'w':

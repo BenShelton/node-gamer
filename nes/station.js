@@ -13,22 +13,18 @@ const BUTTONS = [
 const options = JSON.parse(process.argv[2])
 const emulator = new NES(options)
 
-process.on('message', async ({ net, id }) => {
+process.on('message', ({ net, id }) => {
   const bot = NeuralNetwork.fromJSON(net)
   emulator.load()
   let staticFrames = 0
   let staticPos = 0
-  while (staticFrames < 100) {
-    const output = bot.feedForward(emulator.readMemory(emulator.copyMemory()))
+  while (staticFrames < 150) {
+    // const output = bot.feedForward(emulator.readMemory(emulator.copyMemory()))
+    const output = bot.feedForward(emulator.readSpriteData())
     Matrix.perceptron(output).data.forEach((v, i) => {
       emulator.setButton(v[0], BUTTONS[i])
     })
-    await new Promise(resolve => {
-      setImmediate(() => {
-        emulator.advance()
-        resolve()
-      })
-    })
+    emulator.advance()
     const pos = emulator.readMemory([0x0090])[0]
     if (pos === staticPos) {
       staticFrames++
@@ -36,7 +32,6 @@ process.on('message', async ({ net, id }) => {
       staticPos = pos
     }
   }
-  // emulator.sendMeta({ generation: botnet._generationNum })
   const fitnessVals = emulator.readMemory([0x0075, 0x0090])
   const fitness = (fitnessVals[0] * 255) + fitnessVals[1]
   process.send({ id, fitness })
