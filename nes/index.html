@@ -19,7 +19,7 @@
     span {
       flex: 1 0 auto;
       text-align: center;
-      margin: 0 10px;
+      margin: 0 5px;
     }
     #details {
       display: flex;
@@ -45,7 +45,13 @@
 </head>
 <body>
   <div id="details">
-    <span id="generation">Generation: 0</span>
+    <span id="generation">Generation: -</span>
+    <span>|</span>
+    <span id="fitness-avg">Avg Fitness: -</span>
+    <span>|</span>
+    <span id="fitness-min">Min Fitness: -</span>
+    <span>|</span>
+    <span id="fitness-max">Max Fitness: -</span>
   </div>
   <div id="wrapper">
     <canvas id="screen" width="256" height="240"></canvas>
@@ -59,8 +65,14 @@
 
     // metadata
     const generation = document.getElementById('generation');
+    const fitnessAvg = document.getElementById('fitness-avg');
+    const fitnessMin = document.getElementById('fitness-min');
+    const fitnessMax = document.getElementById('fitness-max');
     socket.on('meta', meta => {
       generation.innerText = `Generation: ${meta.generation}`;
+      fitnessAvg.innerText = `Avg Fitness: ${meta.average}`;
+      fitnessMin.innerText = `Min Fitness: ${meta.min}`;
+      fitnessMax.innerText = `Max Fitness: ${meta.max}`;
     })
 
     // image visualisation
