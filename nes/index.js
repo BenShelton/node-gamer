@@ -18,7 +18,7 @@ module.exports = class NES {
     if (server) {
       const fileSrv = (req, res) => fs.createReadStream('nes/index.html').pipe(res)
       const app = require('http').createServer(fileSrv)
-      app.listen(3000)
+      app.listen(process.env.PORT || 3000)
       this.io = require('socket.io')(app)
     }
     this.emulator = new Emulator({
