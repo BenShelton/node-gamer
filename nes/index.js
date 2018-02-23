@@ -39,12 +39,12 @@ module.exports = class NES {
     })
   }
 
-  load () {
+  load (file = this.file) {
     if (this.fromSave) {
-      const level = JSON.parse(fs.readFileSync(this.file))
+      const level = JSON.parse(fs.readFileSync(file))
       this.emulator.fromJSON(level)
     } else {
-      const rom = fs.readFileSync(this.file, { encoding: 'binary' })
+      const rom = fs.readFileSync(file, { encoding: 'binary' })
       this.emulator.loadROM(rom)
     }
   }
@@ -70,41 +70,9 @@ module.exports = class NES {
     return this.emulator.ppu.spriteMem.slice()
   }
 
-  chooseButton (data) {
-    switch (data.toString().trim().toLowerCase()) {
-      case 'w':
-        this.button = Controller.BUTTON_UP
-        break
-      case 'a':
-        this.button = Controller.BUTTON_LEFT
-        break
-      case 's':
-        this.button = Controller.BUTTON_DOWN
-        break
-      case 'd':
-        this.button = Controller.BUTTON_RIGHT
-        break
-      case 'k':
-        this.button = Controller.BUTTON_A
-        break
-      case 'l':
-        this.button = Controller.BUTTON_B
-        break
-      case 'm':
-        this.button = Controller.BUTTON_START
-        break
-      case 'n':
-        this.button = Controller.BUTTON_SELECT
-        break
-      case '1':
-        this.button = null
-        this.saveState()
-        break
-      default:
-        this.button = null
-    }
-    this.emulator.buttonDown(1, this.button)
-    this.emulator.frame()
+  sendMeta (meta) {
+    if (!this.io) return
+    this.io.emit('meta', meta)
   }
 
   setButton (state, button) {
@@ -114,14 +82,5 @@ module.exports = class NES {
     } else {
       this.emulator.buttonUp(1, b)
     }
-  }
-
-  saveState () {
-    fs.writeFileSync('nes/1-1.json', JSON.stringify(this.emulator.toJSON()))
-  }
-
-  sendMeta (meta) {
-    if (!this.io) return
-    this.io.emit('meta', meta)
   }
 }
