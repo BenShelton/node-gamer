@@ -76,13 +76,13 @@ const generationSize = 20
 const template = new NeuralNetwork({
   // layerSizes: [ADDRESSES.length, 30, BUTTONS.length]
   // layerSizes: [emulator.copyMemory().length, 50, BUTTONS.length]
-  layerSizes: [emulator.readSpriteData().length, 80, 30, BUTTONS.length]
+  layerSizes: [emulator.readSpriteData().length, 600, 150, BUTTONS.length]
 })
 
 const botOptions = [
   { file: 'nes/games/mario3/1-1.json', fromSave: true },
-  { file: 'nes/games/mario3/1-2.json', fromSave: true },
-  { file: 'nes/games/mario3/1-3.json', fromSave: true }
+  { file: 'nes/games/mario3/1-1.json', fromSave: true },
+  { file: 'nes/games/mario3/1-1.json', fromSave: true }
 ]
 const botCount = botOptions.length
 const workers = [...Array(botCount)]
@@ -93,20 +93,21 @@ for (const worker of workers) {
 
 let tickets = 0
 const fitnessFn = bot => {
-  return Promise.all(workers.map(worker => {
-    return new Promise(resolve => {
-      const ticket = ++tickets
-      worker.send({ net: bot.toJSON(), id: ticket })
-      worker.on('message', ({ id, fitness }) => {
-        if (id === ticket) resolve(fitness)
-      })
+  // return Promise.all(workers.map(worker => {
+  return new Promise(resolve => {
+    const ticket = ++tickets
+    const worker = workers[ticket % botCount]
+    worker.send({ net: bot.toJSON(), id: ticket })
+    worker.on('message', ({ id, fitness }) => {
+      if (id === ticket) resolve(fitness)
     })
-  })).then(fitnesses => {
-    return fitnesses.reduce((a, v) => a + v)
   })
+  // })).then(fitnesses => {
+  //   return fitnesses.reduce((a, v) => a + v)
+  // })
 }
 
-const levels = [ '1-1', '1-2', '1-3' ]
+const levels = [ '1-1' ]
 let active = false
 const genFn = async meta => {
   for (const worker of workers) {
@@ -115,42 +116,52 @@ const genFn = async meta => {
   if (active) return
   active = true
   const bot = meta.best
-  const level = levels[Math.floor(Math.random() * levels.length)]
-  emulator.load(`nes/games/mario3/${level}.json`)
-  emulator.sendMeta({ ...meta, level })
-  let staticFrames = 0
-  let staticPos = 0
-  while (staticFrames < 150) {
-    // const output = bot.feedForward(emulator.readMemory(emulator.copyMemory()))
-    const output = bot.feedForward(emulator.readSpriteData())
-    Matrix.perceptron(output).data.forEach((v, i) => {
-      emulator.setButton(v[0], BUTTONS[i])
-    })
-    await new Promise(resolve => {
-      setImmediate(() => {
-        emulator.advance()
-        resolve()
+  for (const level of levels) {
+    emulator.load(`nes/games/mario3/${level}.json`)
+    emulator.sendMeta({ ...meta, level })
+    let staticFrames = 0
+    let staticPos = 0
+    while (staticFrames < 150) {
+      // const output = bot.feedForward(emulator.readMemory(emulator.copyMemory()))
+      const output = bot.feedForward(emulator.readSpriteData())
+      Matrix.perceptron(output).data.forEach((v, i) => {
+        emulator.setButton(v[0], BUTTONS[i])
       })
-    })
-    const pos = emulator.readMemory([0x0090])[0]
-    if (pos === staticPos) {
-      staticFrames++
-    } else {
-      staticPos = pos
+      await new Promise(resolve => {
+        setImmediate(() => {
+          emulator.advance()
+          resolve()
+        })
+      })
+      const pos = emulator.readMemory([0x0090])[0]
+      if (pos === staticPos) {
+        staticFrames++
+      } else {
+        staticPos = pos
+      }
     }
   }
+  emulator.sendMeta({ ...meta, level: 'Loading...' })
   active = false
 }
 
 const botnet = new NeuroEvolution({
   size: generationSize,
-  killRate: 0.25,
-  mutationRate: 0.25,
-  mutationPower: 0.15,
+  killRate: 0.5,
+  mutationRate: 0.35,
+  mutationPower: 0.05,
   template,
   fitnessFn,
   genFn,
   logStats: true
 })
 
-botnet.runGenerations(10000).then(() => console.log('done!'))
+emulator.sendMeta({
+  generation: 0,
+  max: 0,
+  min: 0,
+  average: 0,
+  level: 'Loading...'
+})
+
+botnet.runGenerations(1000).then(() => console.log('done!'))
